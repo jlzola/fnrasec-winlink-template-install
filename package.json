@@ -1,0 +1,30 @@
+{
+  "name": "fnrasec-winlink-template-install",
+  "version": "1.0.0",
+  "description": "Installation des templates FNRASEC dans Winlink ",
+  "type": "commonjs",
+  "main": "app.js",
+  "bin": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "build": "pkg .",
+    "build-all": "pkg . --targets node18-win-x64,node18-linux-x64,node18-macos-x64"
+  },
+  "pkg": {
+    "scripts": [
+      "app.js"
+    ],
+    "assets": [
+      "config.json"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
+  },
+  "author": "Jean-Louis Zola F4IXH",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}
