@@ -19,7 +19,7 @@ Thumbs.db
 
 # Fichiers d'éditeur
 .idea/
-.vscode/
+#.vscode/
 *.swp
 *.swo
 *~
