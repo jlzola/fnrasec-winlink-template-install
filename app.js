@@ -27,10 +27,11 @@ if (versionArgIndex !== -1 && args[versionArgIndex + 1]) {
 // no prompt option
 const noPrompt = process.argv.includes('--no-prompt') || process.argv.includes('-np');
 
-
+const scriptVersion = require('./package.json').version;
 
 const help = `
 Installation des fichiers FNRASEC templates pour Winlink.
+Version ${scriptVersion}
 
 Ce programme télécharge les fichiers .txt et .html de la dernière release GitHub du dépôt :
 https://github.com/jlzola/fnrasec-winlink-template
@@ -54,6 +55,11 @@ Options :
 if (args.includes("--help") || args.includes("-h")) {
   console.log(help);
   process.exit(0);
+}
+else {
+  console.info(`Installation des fichiers FNRASEC templates pour Winlink.
+Version ${scriptVersion}
+  `);
 }
 
 
