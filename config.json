@@ -1,4 +1,5 @@
 {
   "defaultOutputDir": "C:\\RMS Express\\Global Folders\\Templates\\FNRASEC",
-  "githubRepo": "https://api.github.com/repos/jlzola/fnrasec-winlink-template/releases/latest"
+  "githubRepoLatest": "https://api.github.com/repos/jlzola/fnrasec-winlink-template/releases/latest",
+  "githubReporeleases": "https://api.github.com/repos/jlzola/fnrasec-winlink-template/releases"
 }

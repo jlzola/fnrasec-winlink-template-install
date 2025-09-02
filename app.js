@@ -8,41 +8,58 @@ const readline = require('readline');
 const config = require("./config.json");
 
 
-const DEFAULT_REPO_API = config.githubRepo;
+const DEFAULT_REPO_API_LATEST = config.githubRepoLatest;
+const DEFAULT_REPO_API_RELEASES = config.githubReporeleases;
 const DEFAULT_EXTENSIONS = [".txt", ".html"];
 const DEFAULT_OUTPUT = config.defaultOutputDir;
+
 
 // récupère tous les argument sauf les 2 premiers
 const args = process.argv.slice(2);
 
+// Recherche d'un paramètre version (ex: --version 1.2.3 ou -v 1.2.3)
+let versionArgIndex = args.findIndex(arg => arg === '--version' || arg === '-v');
+let versionParam = null;
+if (versionArgIndex !== -1 && args[versionArgIndex + 1]) {
+  versionParam = args[versionArgIndex + 1];
+}
+
 // no prompt option
 const noPrompt = process.argv.includes('--no-prompt') || process.argv.includes('-np');
 
+const scriptVersion = require('./package.json').version;
 
 const help = `
 Installation des fichiers FNRASEC templates pour Winlink.
+Version ${scriptVersion}
 
-Ce programme télécharge les fichiers .txt et .html de la dernière release GitHub du dépôt : 
+Ce programme télécharge les fichiers .txt et .html de la dernière release GitHub du dépôt :
 https://github.com/jlzola/fnrasec-winlink-template
 
 Utilisation :
-  install-fnrasec-template [dossier] 
+  install-fnrasec-template [dossier] [--version <numéro>] 
 
 Arguments :
   [dossier]  Dossier de destination (optionnel)
-             Si omis, l'installation se fait dans le dossier par défaut : 
+             Si omis, l'installation se fait dans le dossier par défaut :
              "${DEFAULT_OUTPUT}"
 
 Options :
-  -h, --help  Affiche cette aide
-  -np, --no-prompt  Installation directement dans le dossier par défaut sans question
-  `
+  -h, --help         Affiche cette aide
+  -np, --no-prompt   Installation directement dans le dossier par défaut sans question
+  -v, --version      Télécharge la version spécifiée (ex: 25.9.5)
+`
 
 
 // Affichage de l'aide
 if (args.includes("--help") || args.includes("-h")) {
   console.log(help);
   process.exit(0);
+}
+else {
+  console.info(`Installation des fichiers FNRASEC templates pour Winlink.
+Version ${scriptVersion}
+  `);
 }
 
 
@@ -54,7 +71,7 @@ if (args.length > 0 && !args[0].startsWith("-"))
 
 
 // Confirme l'installation
-async function confirmeInstallation() {
+async function confirmInstallation() {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -103,19 +120,47 @@ async function getTargetFolder(defaultOutputDir) {
   return path.resolve(userInput.trim() || defaultOutputDir);
 }
 
+async function confirmOverwrite(outputDir) {
+  console.log(`Le dossier ${outputDir} existe déjà.`);
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question('Voulez-vous écraser les fichiers (Entrée pour OUI) ? [Oui]/Non \n', (answer) => {
+      rl.close();
+      const reponse = answer.trim().toLowerCase();
+      resolve(reponse === 'oui' || reponse === 'o' || reponse === '');
+    });
+  });
+}
+
 
 // Récupération des fichiers de la dernière release
 async function fetchLatestRelease() {
-  const response = await fetch(DEFAULT_REPO_API, {
+  const response = await fetch(DEFAULT_REPO_API_LATEST, {
     headers: { "User-Agent": "nodejs" }
   });
-
   if (!response.ok) {
     throw new Error(`Erreur HTTP ${response.status}`);
   }
-
   const data = await response.json();
-  //console.log(data)
+  return data;
+}
+
+// Récupération d'une release spécifique par tag (version)
+async function fetchReleaseByVersion(version) {
+  // version doit être du type v1.2.3 ou 1.2.3
+  let tag = version.startsWith('v') ? version : `${version}`;
+  const url = `${DEFAULT_REPO_API_RELEASES}/tags/${tag}`;
+  const response = await fetch(url, {
+    headers: { "User-Agent": "nodejs" }
+  });
+  if (!response.ok) {
+    throw new Error(`Erreur HTTP ${response.status} pour la version ${version}`);
+  }
+  const data = await response.json();
   return data;
 }
 
@@ -148,19 +193,24 @@ function matchExtension(filename) {
   try {
 
     if (!noPrompt) {
-      const confirmation = await confirmeInstallation();
+      const confirmation = await confirmInstallation();
       if (!confirmation) {
         console.log('Installation abandonnée.');
         process.exit(0);
       }
     }
 
-    console.log("Recherche de la dernière release...");
 
-    // appel le service pour récupérer la dernière version 
-    const data = await fetchLatestRelease();
-    const assets = data.assets; // les fichiers
-    const version = data.name; // la version
+    let data, assets, version;
+    if (versionParam) {
+      console.log(`Recherche de la release pour la version ${versionParam}...`);
+      data = await fetchReleaseByVersion(versionParam);
+    } else {
+      console.log("Recherche de la dernière release...");
+      data = await fetchLatestRelease();
+    }
+    assets = data.assets;
+    version = data.name;
 
     console.log(`Installation de la version ${version} ...`);
 
@@ -177,6 +227,16 @@ function matchExtension(filename) {
     // création du dossier s'il n'existe pas
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
+    }
+    else {
+      if (!noPrompt) {
+        // On demande à l'utilisateur s'il veut écraser le dossier
+        const overwrite = await confirmOverwrite(outputDir);
+        if (!overwrite) {
+          console.log('Installation abandonnée.');
+          process.exit(0);
+        }
+      }
     }
 
 
